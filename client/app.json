@@ -2,7 +2,7 @@
   "expo": {
     "name": "Gyanoda",
     "slug": "gyanoda",
-    "version": "2.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
@@ -22,6 +22,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "versionCode": 2,
       "buildType": "apk",
       "ndk": {
         "abiFilters": ["arm64-v8a"]
