@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doubt Submitted Successfully</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .details {
+            background-color: #ffffff;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        .detail-item {
+            margin-bottom: 10px;
+        }
+        .detail-label {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .footer {
+            margin-top: 20px;
+            font-style: italic;
+            color: #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Doubt Submitted Successfully</h1>
+        <p>Hello <%= name %>,</p>
+        <p>Your doubt session has been scheduled successfully. Here are the details:</p>
+        <div class="details">
+            <% if (doubtDetails.courseName && doubtDetails.courseName !== "Not specified") { %>
+            <div class="detail-item">
+                <span class="detail-label">Course:</span> <%= doubtDetails.courseName %>
+            </div>
+            <% } %>
+            <div class="detail-item">
+                <span class="detail-label">Date:</span> <%= doubtDetails.date %>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Time Slot:</span> <%= doubtDetails.timeSlot %>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Total Questions Submitted:</span> <%= doubtDetails.totalQuestions %>
+            </div>
+        </div>
+        <p>If you have any questions or need to make changes, please don't hesitate to contact us.</p>
+        <p class="footer">Best regards,<br>Gyanoda Team</p>
+        <p class="footer">support@gyanoda.com</p>
+    </div>
+</body>
+</html>
