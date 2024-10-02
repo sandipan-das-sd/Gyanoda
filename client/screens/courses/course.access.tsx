@@ -24,9 +24,6 @@ import { debounce } from "lodash";
 import axios from "axios";
 import useUser from "@/hooks/auth/useUser";
 import { checkAndCleanCache } from "@/utils/cacheManagement";
-import ViewShot, { captureRef } from "react-native-view-shot";
-import RNFetchBlob from "rn-fetch-blob";
-import Share from "react-native-share";
 
 interface Course {
   _id: string;
@@ -52,8 +49,8 @@ interface Question {
   videoLink?: string;
   likes: number;
   dislikes: number;
-  year: number;
-  subject: string;
+  year: number; // Add this line
+  subject: string; // Add this line
 }
 
 interface DoubtModalProps {
@@ -280,6 +277,8 @@ const CourseAccess: React.FC = () => {
   const [filteredQuestions, setFilteredQuestions] = useState<Question[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchTag, setSearchTag] = useState("");
+  const [isLoadingYears, setIsLoadingYears] = useState(false);
+  const [isLoadingSubjects, setIsLoadingSubjects] = useState(false);
   const [isSearchButtonClicked, setIsSearchButtonClicked] = useState(false);
   const [lastSearchTerm, setLastSearchTerm] = useState("");
   const [likedQuestions, setLikedQuestions] = useState<Record<string, boolean>>(
@@ -290,9 +289,9 @@ const CourseAccess: React.FC = () => {
     Record<string, boolean>
   >({});
   const [ghostLoading, setGhostLoading] = useState(true);
+  const [selectedQuestions, setSelectedQuestions] = useState<string[]>([]);
   const [loadingVideoId, setLoadingVideoId] = useState<string | null>(null);
   const [isDoubtModalVisible, setIsDoubtModalVisible] = useState(false);
-  const shareRef = useRef<ViewShot>(null);
 
   const getGuidanceText = () => {
     if (!selectedCourse) {
@@ -411,43 +410,6 @@ const CourseAccess: React.FC = () => {
           (error as Error).message
         })`
       );
-    }
-  };
-
-  const handleShareVideo = async (
-    questionId: string,
-    questionText: string,
-    questionImage: string | undefined
-  ) => {
-    try {
-      if (questionImage) {
-        const { config, fs } = RNFetchBlob;
-        const imagePath = fs.dirs.CacheDir + "/questionImage.png";
-        const res = await config({
-          fileCache: true,
-          appendExt: "png",
-        }).fetch("GET", questionImage);
-
-        const filePath = res.path();
-
-        const shareOptions = {
-          title: "Share Question",
-          message: `Check out this question: ${questionText}\n\nDownload our app to see the video solution!\n\nhttps://play.google.com/store/apps/details?id=com.study_bloom.gyanoda`,
-          url: "file://" + filePath,
-        };
-
-        await Share.open(shareOptions);
-      } else {
-        const shareOptions = {
-          title: "Share Question",
-          message: `Check out this question: ${questionText}\n\nDownload our app to see the video solution!\n\nhttps://play.google.com/store/apps/details?id=com.study_bloom.gyanoda`,
-        };
-
-        await Share.open(shareOptions);
-      }
-    } catch (error) {
-      console.error("Error sharing question:", error);
-      Alert.alert("Error", "Failed to share question");
     }
   };
 
@@ -1042,41 +1004,6 @@ const CourseAccess: React.FC = () => {
             />
           </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          style={styles.shareButton}
-          onPress={() =>
-            handleShareVideo(
-              item._id,
-              item.questionText,
-              item.questionImage?.url
-            )
-          }
-        >
-          <AntDesign name="sharealt" size={20} color="#ffffff" />
-        </TouchableOpacity>
-
-        <ViewShot ref={shareRef} options={{ format: "jpg", quality: 0.9 }}>
-          <View style={styles.shareableContent}>
-            {item.questionImage && (
-              <Image
-                source={{ uri: item.questionImage.url }}
-                style={styles.shareableImage}
-                resizeMode="contain"
-              />
-            )}
-            <Text style={styles.shareableQuestionText}>Question:</Text>
-            <Text style={styles.shareableQuestionContent}>
-              {item.questionText}
-            </Text>
-            <Text style={styles.shareableAppText}>
-              Check out this question on our app!
-            </Text>
-            <Text style={styles.shareableLink}>
-              https://play.google.com/store/apps/details?id=com.study_bloom.gyanoda
-            </Text>
-          </View>
-        </ViewShot>
       </View>
     ),
     [
@@ -1085,7 +1012,6 @@ const CourseAccess: React.FC = () => {
       handleLike,
       handleDislike,
       loadingVideoId,
-      handleShareVideo,
     ]
   );
 
@@ -1322,7 +1248,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
-    position: "relative", // Add this to position the share button absolutely within the card
   },
   questionText: {
     fontSize: 16,
@@ -1671,59 +1596,6 @@ const styles = StyleSheet.create({
 
   searchButtonClicked: {
     backgroundColor: "#0056b3",
-  },
-  shareButton: {
-    position: "absolute",
-    bottom: 10,
-    right: 10,
-    backgroundColor: "#4CAF50",
-    borderRadius: 20,
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 3,
-  },
-  shareButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-    marginLeft: 8,
-  },
-  shareableContent: {
-    width: 300,
-    backgroundColor: "#fff",
-    padding: 20,
-    borderRadius: 10,
-    alignItems: "center",
-    position: "absolute",
-    left: -1000, // Move off-screen
-  },
-  shareableImage: {
-    width: 100,
-    height: 100,
-    marginBottom: 10,
-  },
-  shareableQuestionText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 10,
-  },
-  shareableQuestionContent: {
-    fontSize: 16,
-    textAlign: "center",
-    marginBottom: 10,
-  },
-  shareableAppText: {
-    fontSize: 14,
-    textAlign: "center",
-    marginBottom: 5,
-  },
-  shareableLink: {
-    fontSize: 12,
-    color: "#007bff",
-    textAlign: "center",
   },
 });
 
