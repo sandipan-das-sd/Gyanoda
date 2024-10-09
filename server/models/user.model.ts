@@ -3,16 +3,16 @@ import mongoose, { Document, Model, Schema } from "mongoose";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
-//for validation og email need RegExp
+//for validation of email need RegExp
 const emailRegexPattern: RegExp = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRegexPattern: RegExp = /^\+?[1-9]\d{1,14}$/;
 
 export interface IUser extends Document {
-  _id:string,
+  _id: string;
   name: string;
   email: string;
-  phone: string,
-  location:string,
+  phone: string;
+  location: string;
   password: string;
   avatar: {
     public_id: string;
@@ -22,13 +22,13 @@ export interface IUser extends Document {
   isVerified: boolean;
   provider?: 'email' | 'google' | 'facebook';
   courses: Array<{ courseId: string }>;
+  deviceId?: string; // Adding deviceId field
   comparePassword: (password: string) => Promise<boolean>;
   SignAccessToken: () => string;
   SignRefreshToken: () => string;
 }
 
 const userSchema: Schema<IUser> = new mongoose.Schema(
-  
   {
     name: {
       type: String,
@@ -41,7 +41,7 @@ const userSchema: Schema<IUser> = new mongoose.Schema(
         validator: function (value: string) {
           return emailRegexPattern.test(value);
         },
-        message: "please enter a valid email",
+        message: "Please enter a valid email",
       },
       unique: true,
     },
@@ -66,7 +66,6 @@ const userSchema: Schema<IUser> = new mongoose.Schema(
     },
     password: {
       type: String,
-      
       minlength: [6, "Password must be at least 6 characters"],
       select: false,
     },
@@ -87,9 +86,14 @@ const userSchema: Schema<IUser> = new mongoose.Schema(
         courseId: String,
       },
     ],
+    deviceId: {
+      type: String, // Adding deviceId field to schema
+      default: null,
+    },
   },
   { timestamps: true }
 );
+
 userSchema.index({ phone: 1 }, { unique: true });
 
 userSchema.pre<IUser>("save", async function (next) {
@@ -107,16 +111,6 @@ userSchema.pre<IUser>("save", async function (next) {
     this.password = await bcrypt.hash(this.password, 10);
   }
   
-  next();
-});
-
-
-// Hash Password before saving
-userSchema.pre<IUser>("save", async function (next) {
-  if (!this.isModified("password")) {
-    next();
-  }
-  this.password = await bcrypt.hash(this.password, 10);
   next();
 });
 
