@@ -1973,13 +1973,22 @@ export const getMinimalCourses = CatchAsyncError(
 export const getAllCourses = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const courses = await CourseModel.find().select(
-        "-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links"
-      );
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const skip = (page - 1) * limit;
+
+      const totalCourses = await CourseModel.countDocuments();
+      const courses = await CourseModel.find()
+        .select("-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links")
+        .skip(skip)
+        .limit(limit);
 
       res.status(200).json({
         success: true,
         courses,
+        currentPage: page,
+        totalPages: Math.ceil(totalCourses / limit),
+        totalCourses,
       });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
@@ -2055,36 +2064,77 @@ export const getVimeoVideo = CatchAsyncError(
 
 //get all courses with purchase
 
+// export const getAllCoursesPurchase = CatchAsyncError(
+//   async (req: Request, res: Response, next: NextFunction) => {
+//     try {
+//       const userId = req.user?._id;
+//       console.log("User ID:", userId); 
+
+//       if (!userId) {
+//         return next(new ErrorHandler("User not authenticated", 401));
+//       }
+      
+//       // Fetch user's purchased courses
+//       const userOrders = await OrderModel.find({ userId: userId });
+//       const purchasedCourseIds = userOrders.map(order => order.courseId.toString());
+
+//       console.log("Purchased Course IDs:", purchasedCourseIds); // Log purchased course IDs
+
+//       // Fetch only the purchased courses
+//       const purchasedCourses = await CourseModel.find({
+//         _id: { $in: purchasedCourseIds }
+//       }).select("-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links");
+//         // Store data in Redis cache
+      
+//       console.log("Number of purchased courses:", purchasedCourses.length); // Log number of purchased courses
+
+//       res.status(200).json({
+//         success: true,
+//         courses: purchasedCourses,
+//       });
+//     } catch (error: any) {
+//       console.error("Error in getAllCoursesPurchase:", error); // Log any errors
+//       return next(new ErrorHandler(error.message, 500));
+//     }
+//   }
+// );
+
+
 export const getAllCoursesPurchase = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user?._id;
-      console.log("User ID:", userId); 
-
       if (!userId) {
         return next(new ErrorHandler("User not authenticated", 401));
       }
-      
-      // Fetch user's purchased courses
+
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const skip = (page - 1) * limit;
+
       const userOrders = await OrderModel.find({ userId: userId });
       const purchasedCourseIds = userOrders.map(order => order.courseId.toString());
 
-      console.log("Purchased Course IDs:", purchasedCourseIds); // Log purchased course IDs
+      const totalPurchasedCourses = await CourseModel.countDocuments({
+        _id: { $in: purchasedCourseIds }
+      });
 
-      // Fetch only the purchased courses
       const purchasedCourses = await CourseModel.find({
         _id: { $in: purchasedCourseIds }
-      }).select("-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links");
-        // Store data in Redis cache
-      
-      console.log("Number of purchased courses:", purchasedCourses.length); // Log number of purchased courses
+      })
+      .select("-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links")
+      .skip(skip)
+      .limit(limit);
 
       res.status(200).json({
         success: true,
         courses: purchasedCourses,
+        currentPage: page,
+        totalPages: Math.ceil(totalPurchasedCourses / limit),
+        totalCourses: totalPurchasedCourses,
       });
     } catch (error: any) {
-      console.error("Error in getAllCoursesPurchase:", error); // Log any errors
+      console.error("Error in getAllCoursesPurchase:", error);
       return next(new ErrorHandler(error.message, 500));
     }
   }
