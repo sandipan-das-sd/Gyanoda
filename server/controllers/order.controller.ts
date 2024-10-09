@@ -238,12 +238,88 @@ interface ExtendedOrder extends IOrder {
   createdAt?: Date | string;
 }
 
+// export const getUserTransactionHistory = CatchAsyncError(
+//   async (req: Request, res: Response, next: NextFunction) => {
+//     try {
+//       console.log('Fetching transaction history for user');
+
+//       const userId = req.params.userId;
+
+//       if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+//         console.error('Invalid userId:', userId);
+//         return next(new ErrorHandler("Bad Request: Invalid user ID", 400));
+//       }
+
+//       console.log('Querying orders for userId:', userId);
+
+//       const orders = await OrderModel.find({ userId: userId })
+//         .sort({ createdAt: -1 })
+//         .lean<ExtendedOrder[]>();
+
+//       console.log(`Found ${orders.length} orders for user`);
+
+//       // Log the structure of the first few orders
+//       console.log('First few orders:', JSON.stringify(orders.slice(0, 2), null, 2));
+
+//       // Fetch course details for all orders
+//       //extract the course id from order model
+//       const courseIds = orders.map(order => order.courseId);
+//       //now find the courses details through courseid in courses model
+//       const courses = await CourseModel.find({ _id: { $in: courseIds } })
+//         .select('name price description estimatedPrice thumbnail tags level')
+//         .lean<CourseDetails[]>();
+
+//       // Create a map of course details for quick lookup
+//       const courseMap = new Map(courses.map(course => [course._id.toString(), course]));
+
+//       const transactionHistory = orders.map((order, index) => {
+//         console.log(`Processing order ${index}:`, JSON.stringify(order, null, 2));
+
+//         if (!order || !order._id || !order.courseId) {
+//           console.error(`Invalid order at index ${index}:`, JSON.stringify(order, null, 2));
+//           return null;
+//         }
+
+//         const courseDetails = courseMap.get(order.courseId.toString()) || {} as CourseDetails;
+
+//         return {
+//           orderId: order._id.toString(),
+//           courseId: order.courseId.toString(),
+//           courseName: courseDetails.name || 'Unknown Course',
+//           amount: courseDetails.price || 0,
+//           paymentId: order.payment_info?.razorpay_payment_id || 'N/A',
+//           status: order.payment_info?.status_code === 200 ? 'Completed' : 'Failed',
+//           createdAt: order.createdAt ? new Date(order.createdAt).toISOString() : 'N/A',
+//           // Additional course details
+//           courseDescription: courseDetails.description || 'No description available',
+//           estimatedPrice: courseDetails.estimatedPrice || 0,
+//           thumbnail: courseDetails.thumbnail || 'No thumbnail',
+//           tags: courseDetails.tags || 'No tags',
+//           level: courseDetails.level || 'Not specified'
+//         };
+//       }).filter((transaction): transaction is NonNullable<typeof transaction> => transaction !== null);
+
+//       console.log('Processed transaction history:', JSON.stringify(transactionHistory.slice(0, 2), null, 2));
+
+//       res.status(200).json({
+//         success: true,
+//         transactionHistory
+//       });
+//     } catch (error) {
+//       console.error('Error in getUserTransactionHistory:', error);
+//       return next(new ErrorHandler("Internal Server Error", 500));
+//     }
+//   }
+// );
 export const getUserTransactionHistory = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       console.log('Fetching transaction history for user');
 
       const userId = req.params.userId;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const skip = (page - 1) * limit;
 
       if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
         console.error('Invalid userId:', userId);
@@ -252,19 +328,21 @@ export const getUserTransactionHistory = CatchAsyncError(
 
       console.log('Querying orders for userId:', userId);
 
+      const totalOrders = await OrderModel.countDocuments({ userId: userId });
+
       const orders = await OrderModel.find({ userId: userId })
         .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
         .lean<ExtendedOrder[]>();
 
-      console.log(`Found ${orders.length} orders for user`);
+      console.log(`Found ${orders.length} orders for user on page ${page}`);
 
       // Log the structure of the first few orders
       console.log('First few orders:', JSON.stringify(orders.slice(0, 2), null, 2));
 
       // Fetch course details for all orders
-      //extract the course id from order model
       const courseIds = orders.map(order => order.courseId);
-      //now find the courses details through courseid in courses model
       const courses = await CourseModel.find({ _id: { $in: courseIds } })
         .select('name price description estimatedPrice thumbnail tags level')
         .lean<CourseDetails[]>();
@@ -303,7 +381,13 @@ export const getUserTransactionHistory = CatchAsyncError(
 
       res.status(200).json({
         success: true,
-        transactionHistory
+        transactionHistory,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalOrders / limit),
+          totalTransactions: totalOrders,
+          limit: limit
+        }
       });
     } catch (error) {
       console.error('Error in getUserTransactionHistory:', error);
